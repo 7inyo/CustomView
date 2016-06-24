@@ -12,13 +12,15 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
+import android.os.Handler;
+import android.os.Message;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 
 public class LeafLoadView extends View {
 
-    private static String TAG = "qiufei";
+    private static String TAG = "felix";
 
     private Resources mResource;
     // 淡白色
@@ -49,6 +51,8 @@ public class LeafLoadView extends View {
     private int mAmplitudeDisparity = AMPLITUDE_DISPARITY;
     // 总进度
     private static final int TOTAL_PROGRESS = 100;
+    private Handler h;
+    public static final int EVENT_ON_SIZE_CHANGED = 0;
     // 当前进度
     private int mProgress;
     // 进度条开始绘制的时间
@@ -121,6 +125,9 @@ public class LeafLoadView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
+        Message msg = new Message();
+        msg.what = EVENT_ON_SIZE_CHANGED;
+        this.h.sendMessage(msg);
         Log.d(TAG, "on size changed, w=" + w + ", h=" + h);
         mTotalWidth = w;
         mTotalHeight = h;
@@ -283,6 +290,10 @@ public class LeafLoadView extends View {
             return leafs;
         }
 
+    }
+    
+    public void setHandler(Handler h) {
+    	this.h = h;
     }
 
     /**

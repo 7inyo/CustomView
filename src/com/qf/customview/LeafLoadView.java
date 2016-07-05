@@ -49,25 +49,30 @@ public class LeafLoadView extends View {
     private int mMiddleAmplitude = MIDDLE_AMPLITUDE;
     // 振幅差
     private int mAmplitudeDisparity = AMPLITUDE_DISPARITY;
-    // 总进度
+    //
     private static final int TOTAL_PROGRESS = 100;
-    private Handler h;
+    // main thread handler
+    private Handler mh;
     public static final int EVENT_ON_SIZE_CHANGED = 0;
-    // 当前进度
+    // current progress
     private int mProgress;
-    // 进度条开始绘制的时间
+    // when to draw the progress view
     private long mProgressStartTime = 0;
+    // first leaf arrived left
+    private boolean mFirstLeafArrived = false;
     // 所绘制的进度条部分的宽度
     private int mProgressWidth;
-    // 弧形的半径
+    // the radius of the arc
     private int mArcRadius;
+    // current progress in px
+    private int mCurrentProgressWidth;
     private Bitmap mLeafBitmap, mLeafOuter;
     private int mLeafWidth, mLeafHeight;
     private int mOuterWidth, mOuterHeight;
     private Rect mOuterSrcRect, mOuterDestRect;
     private RectF mWhiteRectF, mOrangeRectF, mArcRectF;
 
-    private Paint mBitmapPaint, mWhitePaint;
+    private Paint mBitmapPaint, mWhitePaint, mOrangePaint;
 
     private int mTotalWidth, mTotalHeight;
     private LeafFactory mLeafFactory;
@@ -110,6 +115,10 @@ public class LeafLoadView extends View {
         mWhitePaint = new Paint();
         mWhitePaint.setAntiAlias(true);
         mWhitePaint.setColor(WHITE_COLOR);
+
+        mOrangePaint = new Paint();
+        mOrangePaint.setAntiAlias(true);
+        mOrangePaint.setColor(ORANGE_COLOR);
     }
 
     @Override
@@ -127,7 +136,7 @@ public class LeafLoadView extends View {
         super.onSizeChanged(w, h, oldw, oldh);
         Message msg = new Message();
         msg.what = EVENT_ON_SIZE_CHANGED;
-        this.h.sendMessage(msg);
+        this.mh.sendMessage(msg);
         Log.d(TAG, "on size changed, w=" + w + ", h=" + h);
         mTotalWidth = w;
         mTotalHeight = h;
@@ -137,6 +146,10 @@ public class LeafLoadView extends View {
         mArcRadius = (mTotalHeight - 2 * mLeftMargin) / 2;
 
         mArcRectF = new RectF(mLeftMargin, mLeftMargin, mLeftMargin + 2 * mArcRadius, mTotalHeight - mLeftMargin);
+        mWhiteRectF = new RectF(mLeftMargin + mArcRadius, mLeftMargin, mTotalWidth - mRightMargin,
+                mTotalHeight - mLeftMargin);
+        mOrangeRectF = new RectF(mLeftMargin + mArcRadius, mLeftMargin, mCurrentProgressWidth,
+                mTotalHeight - mLeftMargin);
     }
 
     @Override
@@ -146,17 +159,42 @@ public class LeafLoadView extends View {
     }
 
     private void drawProgress(Canvas canvas) {
+        if(mProgress>TOTAL_PROGRESS) {
+            mh.sendEmptyMessage(LeafActivity.PROGRESS_DONE);
+            return;
+        }
         long currentTime = System.currentTimeMillis();
         if (mProgressStartTime > currentTime) {
             Log.d(TAG, "leaf not arrived yet");
             return;
         }
-        // canvas.drawArc(mArcRectF, 90, 180, false, mWhitePaint);
-        int angle = (int) Math.toDegrees(Math.acos((mArcRadius - mArcRadius / 2) / (float) mArcRadius));
-        int startAngle = 180 - angle;
-        int sweepAngle = 2 * angle;
-        canvas.drawArc(mArcRectF, startAngle, sweepAngle, false, mWhitePaint);
-        //
+        // first leaf arrived left
+        if (!mFirstLeafArrived) {
+            mFirstLeafArrived = true;
+            // here send only once
+            mh.sendEmptyMessage(LeafActivity.REFRESH_PROGRESS);
+        }
+        mCurrentProgressWidth = mProgressWidth * mProgress / TOTAL_PROGRESS;
+        if (mCurrentProgressWidth < mArcRadius) {
+            // draw white arc
+            canvas.drawArc(mArcRectF, 90, 180, false, mWhitePaint);
+            // draw white rect
+            canvas.drawRect(mWhiteRectF, mWhitePaint);
+            // draw orange arc
+            int angle = (int) Math.toDegrees(Math.acos((mArcRadius - mCurrentProgressWidth) / (float) mArcRadius));
+            int startAngle = 180 - angle;
+            int sweepAngle = 2 * angle;
+            canvas.drawArc(mArcRectF, startAngle, sweepAngle, false, mOrangePaint);
+        } else {
+            // draw orange arc
+            canvas.drawArc(mArcRectF, 90, 180, false, mOrangePaint);
+            // draw orange rect
+            mOrangeRectF.right = mCurrentProgressWidth;
+            canvas.drawRect(mOrangeRectF, mOrangePaint);
+            // draw white rect
+            mWhiteRectF.left = mCurrentProgressWidth;
+            canvas.drawRect(mOrangeRectF, mOrangePaint);
+        }
     }
 
     /**
@@ -291,9 +329,9 @@ public class LeafLoadView extends View {
         }
 
     }
-    
+
     public void setHandler(Handler h) {
-    	this.h = h;
+        this.mh = h;
     }
 
     /**

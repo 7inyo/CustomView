@@ -15,13 +15,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/pieview_activity"
-        android:text="Canvas Activity"/>
+        android:text="@string/canvas_activity"/>
     
     <Button 
         android:id="@+id/leaf_activity"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/canvas_activity"
-        android:text="Leaf Activity"/>
+        android:text="@string/leaf_activity"/>
 
 </RelativeLayout>

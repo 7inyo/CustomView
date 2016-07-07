@@ -7,7 +7,7 @@ import android.view.WindowManager;
 
 public class UiUtils {
     
-    private static String TAG = "qiufei";
+    private static String TAG = "felix";
 
     static public int getScreenWidthPixels(Context context) {
         DisplayMetrics dm = new DisplayMetrics();

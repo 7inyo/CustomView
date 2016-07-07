@@ -12,6 +12,7 @@ import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 public class LeafActivity extends Activity {
 
@@ -70,11 +71,14 @@ public class LeafActivity extends Activity {
                     mh.sendEmptyMessageDelayed(REFRESH_PROGRESS, new Random().nextInt(800));
                 } else {
                     mProgress += 1;
+                    if(mProgress>LeafLoadView.TOTAL_PROGRESS)
+                        return;
                     leaf.setProgress(mProgress);
                     mh.sendEmptyMessageDelayed(REFRESH_PROGRESS, new Random().nextInt(1200));
                 }
                 break;
             case PROGRESS_DONE:
+                Toast.makeText(LeafActivity.this, "loading done!", Toast.LENGTH_LONG).show();
                 mAni.cancel();
                 break;
             }

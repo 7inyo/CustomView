@@ -49,17 +49,19 @@ public class LeafLoadView extends View {
     private int mMiddleAmplitude = MIDDLE_AMPLITUDE;
     // 振幅差
     private int mAmplitudeDisparity = AMPLITUDE_DISPARITY;
-    //
-    private static final int TOTAL_PROGRESS = 100;
+    // total progress
+    public static final int TOTAL_PROGRESS = 100;
     // main thread handler
     private Handler mh;
     public static final int EVENT_ON_SIZE_CHANGED = 0;
     // current progress
-    private int mProgress;
+    private int mProgress = 0;
     // when to draw the progress view
     private long mProgressStartTime = 0;
     // first leaf arrived left
     private boolean mFirstLeafArrived = false;
+    // if loading done
+    private boolean loadingDone = false;
     // 所绘制的进度条部分的宽度
     private int mProgressWidth;
     // the radius of the arc
@@ -148,7 +150,7 @@ public class LeafLoadView extends View {
         mArcRectF = new RectF(mLeftMargin, mLeftMargin, mLeftMargin + 2 * mArcRadius, mTotalHeight - mLeftMargin);
         mWhiteRectF = new RectF(mLeftMargin + mArcRadius, mLeftMargin, mTotalWidth - mRightMargin,
                 mTotalHeight - mLeftMargin);
-        mOrangeRectF = new RectF(mLeftMargin + mArcRadius, mLeftMargin, mCurrentProgressWidth,
+        mOrangeRectF = new RectF(mLeftMargin + mArcRadius, mLeftMargin, mLeftMargin + mCurrentProgressWidth,
                 mTotalHeight - mLeftMargin);
     }
 
@@ -159,9 +161,23 @@ public class LeafLoadView extends View {
     }
 
     private void drawProgress(Canvas canvas) {
-        if(mProgress>TOTAL_PROGRESS) {
-            mh.sendEmptyMessage(LeafActivity.PROGRESS_DONE);
+        if (mProgress >= TOTAL_PROGRESS) {
+            // draw orange arc
+            canvas.drawArc(mArcRectF, 90, 180, false, mOrangePaint);
+            // draw orange rect
+            canvas.drawRect(mOrangeRectF, mOrangePaint);
+            if (!loadingDone) {
+                // send only once
+                mh.sendEmptyMessage(LeafActivity.PROGRESS_DONE);
+                loadingDone = true;
+            }
             return;
+        }
+        if (mProgress == 0) {
+            // draw white arc
+            canvas.drawArc(mArcRectF, 90, 180, false, mWhitePaint);
+            // draw white rect
+            canvas.drawRect(mWhiteRectF, mWhitePaint);
         }
         long currentTime = System.currentTimeMillis();
         if (mProgressStartTime > currentTime) {
@@ -175,6 +191,8 @@ public class LeafLoadView extends View {
             mh.sendEmptyMessage(LeafActivity.REFRESH_PROGRESS);
         }
         mCurrentProgressWidth = mProgressWidth * mProgress / TOTAL_PROGRESS;
+        Log.d(TAG,
+                "mprogress=" + mProgress + ", mcurrentprogresswidth=" + mCurrentProgressWidth + ", arc=" + mArcRadius);
         if (mCurrentProgressWidth < mArcRadius) {
             // draw white arc
             canvas.drawArc(mArcRectF, 90, 180, false, mWhitePaint);
@@ -189,11 +207,11 @@ public class LeafLoadView extends View {
             // draw orange arc
             canvas.drawArc(mArcRectF, 90, 180, false, mOrangePaint);
             // draw orange rect
-            mOrangeRectF.right = mCurrentProgressWidth;
+            mOrangeRectF.right = mCurrentProgressWidth + mLeftMargin;
             canvas.drawRect(mOrangeRectF, mOrangePaint);
             // draw white rect
-            mWhiteRectF.left = mCurrentProgressWidth;
-            canvas.drawRect(mOrangeRectF, mOrangePaint);
+            mWhiteRectF.left = mCurrentProgressWidth + mLeftMargin;
+            canvas.drawRect(mWhiteRectF, mWhitePaint);
         }
     }
 
@@ -203,6 +221,8 @@ public class LeafLoadView extends View {
      * @param canvas
      */
     private void drawLeafs(Canvas canvas) {
+        if (mProgress >= TOTAL_PROGRESS)
+            return;
         mLeafRotateTime = mLeafRotateTime <= 0 ? LEAF_ROTATE_TIME : mLeafRotateTime;
         long currentTime = System.currentTimeMillis();
         for (int i = 0; i < mLeafInfos.size(); i++) {
@@ -210,7 +230,7 @@ public class LeafLoadView extends View {
             if (currentTime > leaf.startTime && leaf.startTime != 0) {
                 // 获取叶子位置
                 getLeafLocation(leaf, currentTime);
-                Log.d(TAG, "leaf x=" + leaf.x + ", leaf y=" + leaf.y);
+                // Log.d(TAG, "leaf x=" + leaf.x + ", leaf y=" + leaf.y);
                 //
                 canvas.save();
                 //
@@ -221,10 +241,12 @@ public class LeafLoadView extends View {
                 matrix.postTranslate(transX, transY);
                 // 叶子旋转，与旋转一周的时间关联起来
                 float rotateFraction = ((currentTime - leaf.startTime) % mLeafRotateTime) / (float) mLeafRotateTime;
-                Log.d(TAG, "curr-start=" + (currentTime - leaf.startTime) + ", mLeafRotateTime=" + mLeafRotateTime);
+                // Log.d(TAG, "curr-start=" + (currentTime - leaf.startTime) +
+                // ", mLeafRotateTime=" + mLeafRotateTime);
                 int angle = (int) (360 * rotateFraction);
                 int rotate = leaf.rotateDirection == 0 ? angle + leaf.rotateAngle : leaf.rotateAngle - angle;
-                Log.d(TAG, "rotateFraction=" + rotateFraction + ", angle=" + angle + ", rotate=" + rotate);
+                // Log.d(TAG, "rotateFraction=" + rotateFraction + ", angle=" +
+                // angle + ", rotate=" + rotate);
                 matrix.postRotate(rotate, transX + mLeafWidth / 2, transY + mLeafHeight / 2);
                 canvas.drawBitmap(mLeafBitmap, matrix, mBitmapPaint);
                 canvas.restore();
@@ -260,7 +282,7 @@ public class LeafLoadView extends View {
             break;
         }
         float q = (new Random().nextInt(2 * mArcRadius)) - mArcRadius;
-        Log.d(TAG, "w=" + w + ", a=" + a + ", q=" + q);
+        // Log.d(TAG, "w=" + w + ", a=" + a + ", q=" + q);
         return (float) (a * Math.sin(w * leaf.x) + mArcRadius);
     }
 
